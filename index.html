@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>跳跃的母鸡</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #0a2f3a 0%, #0a4c5c 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Courier New', 'Press Start 2P', monospace, system-ui;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.4), 0 0 0 8px #f9e0a0, 0 0 0 12px #d4a373;
+            border-radius: 16px;
+            background-color: #7ec8e0;
+            cursor: pointer;
+        }
+
+        .info-panel {
+            margin-top: 20px;
+            background: #2d2f36cc;
+            backdrop-filter: blur(8px);
+            border-radius: 60px;
+            padding: 10px 25px;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ffd966;
+            box-shadow: 0 5px 12px black;
+        }
+
+        .score-box, .best-box {
+            background: #000000aa;
+            padding: 5px 18px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1.7rem;
+            font-family: monospace;
+            color: #ffecb3;
+            letter-spacing: 2px;
+        }
+
+        .score-box span, .best-box span {
+            font-size: 1rem;
+            margin-right: 8px;
+            color: #ffeaa7;
+        }
+
+        .bird-status {
+            background: #1e2a2ecc;
+            border-radius: 50px;
+            padding: 6px 18px;
+            font-size: 0.85rem;
+            color: #f0f0f0;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .difficulty-selector {
+            background: #1e2a2ecc;
+            border-radius: 50px;
+            padding: 5px 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .difficulty-btn {
+            background: #3c5e6b;
+            border: none;
+            color: #ffecb3;
+            padding: 5px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            transition: 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .difficulty-btn.active {
+            background: #e9b35f;
+            color: #1e2a2e;
+            box-shadow: 0 0 5px #ffd58c;
+        }
+
+        .difficulty-btn:hover {
+            background: #f4a261;
+            color: #1e2a2e;
+            transform: scale(0.96);
+        }
+
+        .restart-btn {
+            background: #e76f51;
+            border: none;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 6px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-family: monospace;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px black;
+        }
+
+        .restart-btn:hover {
+            background: #f4a261;
+            transform: scale(0.96);
+        }
+
+        .instruction {
+            margin-top: 15px;
+            background: #00000088;
+            border-radius: 28px;
+            padding: 6px 18px;
+            color: #fef9e6;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        @media (max-width: 650px) {
+            .info-panel {
+                gap: 12px;
+                padding: 8px 15px;
+            }
+            .score-box, .best-box {
+                font-size: 1.2rem;
+                padding: 3px 10px;
+            }
+            .difficulty-selector {
+                padding: 3px 10px;
+            }
+            .difficulty-btn {
+                padding: 3px 8px;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="480" height="640"></canvas>
+        <div class="info-panel">
+            <div class="score-box"><span>🐤 得分</span> <span id="currentScore">0</span></div>
+            <div class="best-box"><span>🏆 最佳</span> <span id="bestScore">0</span></div>
+            <div class="difficulty-selector">
+                <span>⚡ 难度</span>
+                <button class="difficulty-btn" data-diff="normal">简单</button>
+                <button class="difficulty-btn" data-diff="advanced">进阶</button>
+                <button class="difficulty-btn" data-diff="extreme">超困难</button>
+            </div>
+            <div class="bird-status">
+                <span>🐦 小鸟:</span>
+                <span id="birdLoadStatus">加载 bird.png ...</span>
+            </div>
+            <button class="restart-btn" id="restartButton">🔄 重来</button>
+        </div>
+        <div class="instruction">
+            💡 难度影响管道移动速度 | 普通(基准) / 进阶(3倍速) / 超困难(5倍速) <br>
+            🕹️ 点击画面 / 空格 / 上箭头 => 跳跃 | 穿过管道得分（小母鸡你能玩到100分么）
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ----- 画布元素 -----
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // ========== 基础物理常量 (普通难度基准) ==========
+        // 下坠速度 (缓降5倍手感)
+        const BASE_GRAVITY = 0.04;          
+        const JUMP_POWER = -2.2;             
+        
+        // 普通难度管道速度 (基准速度，慢3倍后的舒适值 ≈ 0.73)
+        // 之前飞行速度慢3倍后的值为 0.73，现在作为普通难度的标准速度
+        const NORMAL_PIPE_SPEED = 0.73;      
+        // 进阶难度: 普通速度的 3倍
+        const ADVANCED_PIPE_SPEED = NORMAL_PIPE_SPEED * 3;   // 2.19
+        // 超困难难度: 普通速度的 5倍
+        const EXTREME_PIPE_SPEED = NORMAL_PIPE_SPEED * 5;     // 3.65
+        
+        // 管道固定参数
+        const PIPE_WIDTH = 52;
+        const PIPE_GAP = 150;       
+        const PIPE_SPACING = 280;       // 间距固定
+        
+        // 小鸟碰撞箱
+        const BIRD_WIDTH = 36;
+        const BIRD_HEIGHT = 36;
+        
+        // 世界边界
+        const GROUND_Y_OFFSET = 70;   
+        const CEILING_DEATH = 0;      
+        
+        // 游戏状态
+        let gameRunning = true;
+        let score = 0;
+        let bestScore = 0;
+        
+        // 小鸟物理
+        let birdY = canvas.height/2;
+        let birdVelocity = 0;
+        
+        // 管道数组
+        let pipes = [];
+        
+        // 当前难度: 'normal', 'advanced', 'extreme'
+        let currentDifficulty = 'normal';
+        // 当前使用的管道移动速度 (根据难度动态更新)
+        let currentPipeSpeed = NORMAL_PIPE_SPEED;
+        
+        // 帧动画ID
+        let animationId = null;
+        
+        // ---------- 小鸟图片核心 (自动加载bird.png) ----------
+        let birdImage = new Image();
+        let imageLoadedSuccess = false;
+        let imageLoadingFailed = false;
+        const birdStatusSpan = document.getElementById('birdLoadStatus');
+        
+        function loadBirdImage() {
+            imageLoadedSuccess = false;
+            imageLoadingFailed = false;
+            birdStatusSpan.innerText = "加载 bird.png ...";
+            const img = new Image();
+            img.onload = function() {
+                birdImage = img;
+                imageLoadedSuccess = true;
+                imageLoadingFailed = false;
+                birdStatusSpan.innerText = "✓ bird.png 已加载";
+                birdStatusSpan.style.color = "#a3ffa3";
+                setTimeout(() => {
+                    if(birdStatusSpan.style.color) birdStatusSpan.style.color = "#f0f0f0";
+                }, 1500);
+            };
+            img.onerror = function(err) {
+                console.warn("未找到 bird.png, 使用默认小鸟", err);
+                imageLoadedSuccess = false;
+                imageLoadingFailed = true;
+                birdStatusSpan.innerText = "⚠️ 未找到bird.png, 使用默认小鸟";
+                birdStatusSpan.style.color = "#ffaa88";
+                birdImage = new Image();
+            };
+            img.src = "bird.png";
+        }
+        
+        // ----- 本地存储最佳分数 (按难度分别存储? 为了公平，但保持统一最高分也可以，但更好体验：分开存储or统一？这里做统一最高分，让挑战更有动力) 
+        // 为了难度切换不丢失最高分记录，存储全局最佳分数，不同难度共享一个最高分记录，激励挑战高难度
+        function loadBestScore(){
+            const saved = localStorage.getItem('flappyBirdBestGlobal');
+            if(saved && !isNaN(parseInt(saved))){
+                bestScore = parseInt(saved);
+                document.getElementById('bestScore').innerText = bestScore;
+            } else {
+                bestScore = 0;
+                document.getElementById('bestScore').innerText = "0";
+            }
+        }
+        
+        function updateBestScoreUI(){
+            if(score > bestScore){
+                bestScore = score;
+                localStorage.setItem('flappyBirdBestGlobal', bestScore);
+                document.getElementById('bestScore').innerText = bestScore;
+            }
+        }
+        
+        function updateScoreUI(){
+            document.getElementById('currentScore').innerText = score;
+        }
+        
+        // 根据当前难度更新管道速度并重置游戏 (保留最佳分数)
+        function applyDifficultyAndReset(){
+            // 更新速度
+            if(currentDifficulty === 'normal'){
+                currentPipeSpeed = NORMAL_PIPE_SPEED;
+            } else if(currentDifficulty === 'advanced'){
+                currentPipeSpeed = ADVANCED_PIPE_SPEED;
+            } else if(currentDifficulty === 'extreme'){
+                currentPipeSpeed = EXTREME_PIPE_SPEED;
+            }
+            // 重置游戏状态 (保留全局最高分)
+            resetGame();
+        }
+        
+        // 重置游戏数据 (不清除最高分，重置小鸟位置、管道、分数)
+        function resetGame(){
+            gameRunning = true;
+            score = 0;
+            updateScoreUI();
+            birdY = canvas.height/2;
+            birdVelocity = 0;
+            pipes = [];
+            generateInitialPipes();
+            // 保证最佳分数UI刷新
+            document.getElementById('bestScore').innerText = bestScore;
+        }
+        
+        // 生成初始管道 (基于当前速度，位置稍微偏移保证流畅)
+        function generateInitialPipes(){
+            let startX = canvas.width + 100;
+            for(let i = 0; i < 4; i++){
+                let gapY = getRandomGapY();
+                pipes.push({
+                    x: startX + i * PIPE_SPACING,
+                    gapY: gapY,
+                    counted: false
+                });
+            }
+        }
+        
+        function getRandomGapY(){
+            const minGap = 70;
+            const maxGap = canvas.height - GROUND_Y_OFFSET - PIPE_GAP - 20;
+            let gap = Math.floor(Math.random() * (maxGap - minGap + 1) + minGap);
+            return Math.min(Math.max(gap, 55), canvas.height - GROUND_Y_OFFSET - PIPE_GAP - 15);
+        }
+        
+        // ----- 更新逻辑 (使用动态 currentPipeSpeed)-----
+        function updateGame(){
+            if(!gameRunning) return;
+            
+            // 重力更新
+            birdVelocity += BASE_GRAVITY;
+            birdY += birdVelocity;
+            
+            // 边界死亡检测
+            if(birdY + BIRD_HEIGHT/2 >= canvas.height - GROUND_Y_OFFSET){
+                gameRunning = false;
+                return;
+            }
+            if(birdY - BIRD_HEIGHT/2 <= CEILING_DEATH){
+                gameRunning = false;
+                return;
+            }
+            
+            // 管道移动 (根据难度不同速度)
+            for(let i = 0; i < pipes.length; i++){
+                const p = pipes[i];
+                p.x -= currentPipeSpeed;
+                
+                // 超出左侧屏幕移除并生成新管道
+                if(p.x + PIPE_WIDTH < 0){
+                    pipes.splice(i,1);
+                    i--;
+                    if(pipes.length > 0){
+                        let lastPipe = pipes[pipes.length-1];
+                        let newX = lastPipe.x + PIPE_SPACING;
+                        let newGapY = getRandomGapY();
+                        pipes.push({
+                            x: newX,
+                            gapY: newGapY,
+                            counted: false
+                        });
+                    } else {
+                        let newX = canvas.width + 50;
+                        pipes.push({
+                            x: newX,
+                            gapY: getRandomGapY(),
+                            counted: false
+                        });
+                    }
+                    continue;
+                }
+                
+                // 碰撞检测
+                const birdLeft = canvas.width/2 - BIRD_WIDTH/2;
+                const birdRight = canvas.width/2 + BIRD_WIDTH/2;
+                const birdTop = birdY - BIRD_HEIGHT/2;
+                const birdBottom = birdY + BIRD_HEIGHT/2;
+                const topPipeBottom = p.gapY;
+                const bottomPipeTop = p.gapY + PIPE_GAP;
+                
+                if(birdRight > p.x && birdLeft < p.x + PIPE_WIDTH){
+                    if(birdTop < topPipeBottom){
+                        gameRunning = false;
+                        return;
+                    }
+                    if(birdBottom > bottomPipeTop){
+                        gameRunning = false;
+                        return;
+                    }
+                }
+                
+                // 得分判定
+                if(!p.counted && (canvas.width/2 - BIRD_WIDTH/2) > p.x + PIPE_WIDTH){
+                    p.counted = true;
+                    score++;
+                    updateScoreUI();
+                    updateBestScoreUI();
+                }
+            }
+            
+            // 维持管道数量，避免空窗
+            if(pipes.length < 2){
+                let lastX = pipes.length ? pipes[pipes.length-1].x : canvas.width;
+                pipes.push({
+                    x: lastX + PIPE_SPACING,
+                    gapY: getRandomGapY(),
+                    counted: false
+                });
+            }
+        }
+        
+        // ---------- 华丽渲染 ----------
+        function drawBackground(){
+            const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+            grad.addColorStop(0,"#a2def7");
+            grad.addColorStop(0.6,"#6bb5d9");
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#ffffffc0";
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.ellipse(70, 80, 45, 35, 0, 0, Math.PI*2);
+            ctx.ellipse(120, 70, 40, 32, 0, 0, Math.PI*2);
+            ctx.ellipse(160, 90, 38, 30, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(390, 140, 52, 38, 0, 0, Math.PI*2);
+            ctx.ellipse(440, 125, 44, 34, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#5c9e5e";
+            ctx.fillRect(0, canvas.height - GROUND_Y_OFFSET, canvas.width, GROUND_Y_OFFSET);
+            ctx.fillStyle = "#7fb07f";
+            for(let i=0;i<14;i++){
+                ctx.fillRect(i*40, canvas.height-GROUND_Y_OFFSET-7, 28, 12);
+            }
+            ctx.fillStyle = "#dba54e";
+            ctx.fillRect(0, canvas.height - GROUND_Y_OFFSET+4, canvas.width, 6);
+        }
+        
+        function drawPipes(){
+            for(let p of pipes){
+                const gradTop = ctx.createLinearGradient(p.x, 0, p.x+PIPE_WIDTH, 0);
+                gradTop.addColorStop(0, "#2f6b2f");
+                gradTop.addColorStop(1, "#4cae4c");
+                ctx.fillStyle = gradTop;
+                ctx.fillRect(p.x, 0, PIPE_WIDTH, p.gapY);
+                ctx.fillStyle = "#2b5e2b";
+                ctx.fillRect(p.x+6, p.gapY-30, PIPE_WIDTH-12, 30);
+                ctx.fillStyle = "#8ed15e";
+                ctx.fillRect(p.x+3, p.gapY-20, PIPE_WIDTH-6, 12);
+                
+                const bottomY = p.gapY + PIPE_GAP;
+                const bottomHeight = canvas.height - GROUND_Y_OFFSET - bottomY;
+                const gradBottom = ctx.createLinearGradient(p.x, bottomY, p.x+PIPE_WIDTH, bottomY+40);
+                gradBottom.addColorStop(0, "#2f6b2f");
+                gradBottom.addColorStop(1, "#4cae4c");
+                ctx.fillStyle = gradBottom;
+                ctx.fillRect(p.x, bottomY, PIPE_WIDTH, bottomHeight);
+                ctx.fillStyle = "#2b5e2b";
+                ctx.fillRect(p.x+6, bottomY, PIPE_WIDTH-12, 30);
+                ctx.fillStyle = "#8ed15e";
+                ctx.fillRect(p.x+3, bottomY+18, PIPE_WIDTH-6, 12);
+            }
+        }
+        
+        function drawBird(){
+            const birdX = canvas.width/2 - BIRD_WIDTH/2;
+            const birdYPos = birdY - BIRD_HEIGHT/2;
+            const angle = Math.min(Math.max(birdVelocity * 0.25, -0.7), 0.8);
+            ctx.save();
+            ctx.translate(canvas.width/2, birdY);
+            ctx.rotate(angle);
+            ctx.translate(-(canvas.width/2), -birdY);
+            
+            if(imageLoadedSuccess && birdImage.complete && birdImage.naturalWidth > 0){
+                try {
+                    ctx.drawImage(birdImage, birdX, birdYPos, BIRD_WIDTH, BIRD_HEIGHT);
+                } catch(e) {
+                    drawFallbackBird(birdX, birdYPos);
+                }
+            } else {
+                drawFallbackBird(birdX, birdYPos);
+            }
+            ctx.restore();
+        }
+        
+        function drawFallbackBird(x, y){
+            ctx.fillStyle = "#ffa559";
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
+            ctx.beginPath();
+            ctx.ellipse(x+BIRD_WIDTH/2, y+BIRD_HEIGHT/2, BIRD_WIDTH/2, BIRD_HEIGHT/2.2, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#e0692e";
+            ctx.beginPath();
+            ctx.ellipse(x+BIRD_WIDTH*0.7, y+BIRD_HEIGHT*0.4, 5, 6, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(x+BIRD_WIDTH*0.6, y+BIRD_HEIGHT*0.33, 2.6, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#1e2a2e";
+            ctx.beginPath();
+            ctx.arc(x+BIRD_WIDTH*0.57, y+BIRD_HEIGHT*0.31, 1.4, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#f08c2e";
+            ctx.beginPath();
+            ctx.moveTo(x+BIRD_WIDTH*0.86, y+BIRD_HEIGHT*0.47);
+            ctx.lineTo(x+BIRD_WIDTH*0.99, y+BIRD_HEIGHT*0.52);
+            ctx.lineTo(x+BIRD_WIDTH*0.86, y+BIRD_HEIGHT*0.6);
+            ctx.fill();
+            ctx.fillStyle = "#e05a1a";
+            ctx.beginPath();
+            ctx.moveTo(x+BIRD_WIDTH*0.3, y+BIRD_HEIGHT*0.2);
+            ctx.lineTo(x+BIRD_WIDTH*0.45, y+BIRD_HEIGHT*0.07);
+            ctx.lineTo(x+BIRD_WIDTH*0.55, y+BIRD_HEIGHT*0.18);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+        
+        function drawGameOverlay(){
+            if(!gameRunning){
+                ctx.fillStyle = "rgba(0,0,0,0.78)";
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.font = "bold 36px 'Courier New', monospace";
+                ctx.fillStyle = "#ffda88";
+                ctx.fillText("GAME OVER", canvas.width/2-125, canvas.height/2-45);
+                ctx.font = "20px monospace";
+                ctx.fillStyle = "#fff5e0";
+                ctx.fillText("点击「重来」继续挑战", canvas.width/2-130, canvas.height/2+30);
+                ctx.font = "15px monospace";
+                ctx.fillStyle = "#ffe0a3";
+                let diffText = "";
+                if(currentDifficulty === 'normal') diffText = "普通难度 (标准速度)";
+                else if(currentDifficulty === 'advanced') diffText = "进阶难度 (3倍速)";
+                else diffText = "超困难 (5倍速)";
+                ctx.fillText(`当前难度: ${diffText}  | 空格/点击跳跃`, canvas.width/2-190, canvas.height/2+85);
+            }
+        }
+        
+        function drawStatusMessage(){
+            if(!imageLoadedSuccess && !imageLoadingFailed){
+                ctx.font = "12px monospace";
+                ctx.fillStyle = "#f9f3c1";
+                ctx.fillText("🕊️ 正在加载 bird.png ...", 14, 45);
+            } else if(imageLoadingFailed){
+                ctx.font = "12px monospace";
+                ctx.fillStyle = "#ffc89c";
+                ctx.fillText("💡 提示: 请将图片命名为 bird.png 放在本文件夹", 14, 45);
+            } else if(imageLoadedSuccess){
+                ctx.font = "11px monospace";
+                ctx.fillStyle = "#daffd4";
+                ctx.fillText("🐦 自定义图片 | 难度影响飞行速度", 14, 45);
+            }
+            // 额外显示当前速度倍率提示
+            ctx.font = "11px monospace";
+            ctx.fillStyle = "#fff3c9";
+            if(currentDifficulty === 'normal') ctx.fillText("⚡ 普通难度 · 标准节奏", canvas.width-120, 30);
+            else if(currentDifficulty === 'advanced') ctx.fillText("⚡⚡ 进阶难度 · 3倍速", canvas.width-120, 30);
+            else ctx.fillText("⚡⚡⚡ 超困难 · 5倍速", canvas.width-120, 30);
+        }
+        
+        function jump(){
+            if(!gameRunning) return;
+            birdVelocity = JUMP_POWER;
+        }
+        
+        function restartGame(){
+            resetGame();
+            gameRunning = true;
+        }
+        
+        // ----- 难度切换逻辑 (同时重置游戏并应用新速度)-----
+        function setDifficulty(level){
+            if(level === currentDifficulty) return;
+            currentDifficulty = level;
+            // 更新速度
+            if(currentDifficulty === 'normal'){
+                currentPipeSpeed = NORMAL_PIPE_SPEED;
+            } else if(currentDifficulty === 'advanced'){
+                currentPipeSpeed = ADVANCED_PIPE_SPEED;
+            } else if(currentDifficulty === 'extreme'){
+                currentPipeSpeed = EXTREME_PIPE_SPEED;
+            }
+            // 重置游戏 (保留全局最高分)
+            resetGame();
+            // 更新UI按钮样式
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                if(btn.getAttribute('data-diff') === level){
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+        
+        // 绑定事件
+        function bindEvents(){
+            canvas.addEventListener('click', (e) => {
+                e.preventDefault();
+                jump();
+            });
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                jump();
+            }, {passive: false});
+            window.addEventListener('keydown', (e) => {
+                if(e.code === 'Space' || e.code === 'ArrowUp'){
+                    e.preventDefault();
+                    jump();
+                }
+                if(e.code === 'KeyR'){
+                    e.preventDefault();
+                    restartGame();
+                }
+            });
+            document.getElementById('restartButton').addEventListener('click', () => {
+                restartGame();
+            });
+            
+            // 难度按钮监听
+            const diffBtns = document.querySelectorAll('.difficulty-btn');
+            diffBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const diff = btn.getAttribute('data-diff');
+                    if(diff === 'normal') setDifficulty('normal');
+                    else if(diff === 'advanced') setDifficulty('advanced');
+                    else if(diff === 'extreme') setDifficulty('extreme');
+                });
+            });
+        }
+        
+        function gameLoop(){
+            updateGame();
+            drawBackground();
+            drawPipes();
+            drawBird();
+            drawStatusMessage();
+            drawGameOverlay();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        function init(){
+            loadBestScore();
+            // 初始普通难度速度
+            currentPipeSpeed = NORMAL_PIPE_SPEED;
+            currentDifficulty = 'normal';
+            // 高亮普通按钮
+            document.querySelector('.difficulty-btn[data-diff="normal"]').classList.add('active');
+            resetGame();
+            bindEvents();
+            loadBirdImage();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        init();
+    })();
+</script>
+</body>
+</html>
